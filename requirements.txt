@@ -13,6 +13,7 @@ click-plugins==1.1.1
 click-repl==0.2.0
 coreapi==2.3.3
 coreschema==0.0.4
+dj-database-url==2.0.0
 Django==4.2.1
 djangorestframework==3.14.0
 drf-yasg==1.21.5
@@ -25,6 +26,7 @@ kombu==5.2.4
 MarkupSafe==2.1.2
 packaging==23.1
 prompt-toolkit==3.0.38
+psycopg2-binary==2.9.6
 python-dotenv==1.0.0
 pytz==2023.3
 redis==4.5.5
@@ -34,6 +36,7 @@ ruamel.yaml.clib==0.2.7
 six==1.16.0
 soupsieve==2.4.1
 sqlparse==0.4.4
+typing_extensions==4.5.0
 uritemplate==4.1.1
 urllib3==2.0.2
 vine==5.0.0
