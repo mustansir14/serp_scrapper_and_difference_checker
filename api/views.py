@@ -10,6 +10,7 @@ from django.core.exceptions import ValidationError
 from rest_framework.decorators import api_view, renderer_classes
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework import status
 import difflib
 
@@ -81,10 +82,11 @@ class ResultsViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-@api_view(('GET', ))
-@renderer_classes((JSONRenderer, ))
-def get_difference_html(scrape1_id: int, scrape2_id: int, page_link: str) -> Response:
+def get_difference(request: Request, html: bool) -> Response:
 
+    scrape1_id = request.query_params.get("scrape1_id")
+    scrape2_id = request.query_params.get("scrape2_id")
+    page_link = request.query_params.get("page_link")
     try:
         scrape1 = Scrape.objects.get(id=scrape1_id)
     except Scrape.DoesNotExist:
@@ -106,5 +108,62 @@ def get_difference_html(scrape1_id: int, scrape2_id: int, page_link: str) -> Res
     except Result.DoesNotExist:
         return Response({"status": "error", "message": "Result with given page_link does not exist for Scrape 2"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # data = {"scrape1": ScrapeSerializer(
-    #     scrape1).data, "scrape2": ScrapeSerializer(scrape2).data, "url"}
+    d = difflib.Differ()
+    if html:
+        text1_lines = result1.page_content_html.splitlines()
+        text2_lines = result2.page_content_html.splitlines()
+    else:
+        text1_lines = result1.page_content_text.splitlines()
+        text2_lines = result2.page_content_text.splitlines()
+    diff = "\n".join(d.compare(text1_lines, text2_lines))
+    data = {"scrape1": ScrapeSerializer(
+        scrape1).data, "scrape2": ScrapeSerializer(scrape2).data, "page_link": page_link, "difference": diff}
+    return Response(data, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=[
+        openapi.Parameter('scrape1_id', openapi.IN_QUERY,
+                          description="ID of scrape 1 to get difference",
+                          type=openapi.TYPE_INTEGER,
+                          required=True),
+        openapi.Parameter('scrape2_id', openapi.IN_QUERY,
+                          description="ID of scrape 2 to get difference",
+                          type=openapi.TYPE_INTEGER,
+                          required=True),
+        openapi.Parameter('page_link', openapi.IN_QUERY,
+                          description="The URL of the page for which difference is to be returned",
+                          type=openapi.TYPE_STRING,
+                          required=True)
+    ]
+)
+@api_view(('GET', ))
+@renderer_classes((JSONRenderer, ))
+def get_difference_html(request) -> Response:
+
+    return get_difference(request, True)
+
+
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=[
+        openapi.Parameter('scrape1_id', openapi.IN_QUERY,
+                          description="ID of scrape 1 to get difference",
+                          type=openapi.TYPE_INTEGER,
+                          required=True),
+        openapi.Parameter('scrape2_id', openapi.IN_QUERY,
+                          description="ID of scrape 2 to get difference",
+                          type=openapi.TYPE_INTEGER,
+                          required=True),
+        openapi.Parameter('page_link', openapi.IN_QUERY,
+                          description="The URL of the page for which difference is to be returned",
+                          type=openapi.TYPE_STRING,
+                          required=True)
+    ]
+)
+@api_view(('GET', ))
+@renderer_classes((JSONRenderer, ))
+def get_difference_text(request) -> Response:
+
+    return get_difference(request, False)

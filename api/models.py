@@ -18,6 +18,8 @@ class Query(models.Model):
     query = models.TextField(null=False, blank=False, unique=True)
     interval_no_of_months = models.PositiveIntegerField(
         null=False, blank=False)
+    created_at = models.DateTimeField(
+        null=False, blank=False, auto_now_add=True)
 
 
 class Scrape(models.Model):

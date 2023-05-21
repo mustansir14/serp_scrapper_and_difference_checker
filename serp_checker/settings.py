@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 from pathlib import Path
+from celery.schedules import crontab
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -124,3 +126,22 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Celery Configuration
+
+CELERY_APP = 'serp_checker.celery:app'
+
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Redis URL
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'  # Redis URL
+
+# Celery Beat Configuration (for scheduling)
+CELERY_BEAT_SCHEDULE = {
+    'scrape-queries-task': {
+        'task': 'api.tasks.scrape_queries',  # Task to be executed
+        # Schedule interval (e.g., 30 days)
+        # 'schedule': crontab(day_of_month='1')
+        'schedule': timedelta(minutes=2)
+    },
+}

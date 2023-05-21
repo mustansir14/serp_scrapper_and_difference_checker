@@ -9,7 +9,7 @@ class QuerySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Query
-        fields = "__all__"
+        fields = ("query", "interval_no_of_months")
 
 
 class ScrapeSerializer(serializers.ModelSerializer):

@@ -9,4 +9,6 @@ router.register(r'results', views.ResultsViewSet, basename='result')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('get_difference_html', views.get_difference_html),
+    path('get_difference_text', views.get_difference_text),
 ]
