@@ -141,7 +141,7 @@ CELERY_BEAT_SCHEDULE = {
     'scrape-queries-task': {
         'task': 'api.tasks.scrape_queries',  # Task to be executed
         # Schedule interval (e.g., 30 days)
-        # 'schedule': crontab(day_of_month='1')
-        'schedule': timedelta(minutes=2)
+        'schedule': crontab(day_of_month='1')
+        # 'schedule': timedelta(minutes=2)
     },
 }
