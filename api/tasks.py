@@ -9,6 +9,7 @@ logging.basicConfig(format='%(asctime)s %(message)s',
 
 @shared_task
 def scrape_queries():
+    logging.info(f"[Scheduled]: Running task to scrape queries")
     # Get all queries
     queries = Query.objects.all()
 
