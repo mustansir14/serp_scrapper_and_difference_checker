@@ -9,7 +9,8 @@ class QuerySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Query
-        fields = ("query", "interval_no_of_months")
+        fields = ("query", "interval_no_of_months", "id")
+        read_only_fields = ("id")
 
 
 class ScrapeSerializer(serializers.ModelSerializer):
