@@ -41,9 +41,6 @@ query_id = openapi.Parameter('query_id', openapi.IN_QUERY,
 @method_decorator(name='list', decorator=swagger_auto_schema(
     manual_parameters=[query_id]
 ))
-@method_decorator(name='retrieve', decorator=swagger_auto_schema(
-    manual_parameters=[query_id]
-))
 class ScrapeViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
     serializer_class = ScrapeSerializer
@@ -59,7 +56,7 @@ class ScrapeViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.Retri
         if query is not None:
             queryset = Scrape.objects.filter(query__id=query)
         else:
-            raise ValidationError({"message": "Missing query_id parameter"})
+            queryset = Scrape.objects.all()
         return queryset
 
 
