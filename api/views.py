@@ -41,6 +41,9 @@ query_id = openapi.Parameter('query_id', openapi.IN_QUERY,
 @method_decorator(name='list', decorator=swagger_auto_schema(
     manual_parameters=[query_id]
 ))
+@method_decorator(name='retrieve', decorator=swagger_auto_schema(
+    manual_parameters=[query_id]
+))
 class ScrapeViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
     serializer_class = ScrapeSerializer
