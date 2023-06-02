@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import mixins, viewsets
 from api.serializers import QuerySerializer, ScrapeSerializer, ResultSerializer
@@ -41,7 +43,7 @@ query_id = openapi.Parameter('query_id', openapi.IN_QUERY,
 @method_decorator(name='list', decorator=swagger_auto_schema(
     manual_parameters=[query_id]
 ))
-class ScrapeViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class ScrapeViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet, mixins.DestroyModelMixin):
 
     serializer_class = ScrapeSerializer
 
@@ -82,11 +84,11 @@ class ResultsViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-def get_difference(request: Request, html: bool) -> Response:
+def get_scrapes_from_params(request: Request) -> Tuple[Scrape, Scrape]:
 
     scrape1_id = request.query_params.get("scrape1_id")
     scrape2_id = request.query_params.get("scrape2_id")
-    page_link = request.query_params.get("page_link")
+
     try:
         scrape1 = Scrape.objects.get(id=scrape1_id)
     except Scrape.DoesNotExist:
@@ -98,6 +100,14 @@ def get_difference(request: Request, html: bool) -> Response:
 
     if scrape1.query != scrape2.query:
         return Response({"status": "error", "message": "Both scrapes belong to different queries"}, status=status.HTTP_400_BAD_REQUEST)
+
+    return scrape1, scrape2
+
+
+def get_difference(request: Request, html: bool, as_arrays: bool = False) -> Response:
+
+    page_link = request.query_params.get("page_link")
+    scrape1, scrape2 = get_scrapes_from_params(request)
 
     try:
         result1 = Result.objects.get(scrape=scrape1, page_link=page_link)
@@ -115,55 +125,89 @@ def get_difference(request: Request, html: bool) -> Response:
     else:
         text1_lines = result1.page_content_text.splitlines()
         text2_lines = result2.page_content_text.splitlines()
-    diff = "\n".join(d.compare(text1_lines, text2_lines))
+    diff = d.compare(text1_lines, text2_lines)
+    if not as_arrays:
+        diff = "\n".join(diff)
     data = {"scrape1": ScrapeSerializer(
         scrape1).data, "scrape2": ScrapeSerializer(scrape2).data, "page_link": page_link, "difference": diff}
     return Response(data, status=status.HTTP_200_OK)
 
 
+difference_views_parameters = [
+    openapi.Parameter('scrape1_id', openapi.IN_QUERY,
+                      description="ID of scrape 1 to get difference",
+                      type=openapi.TYPE_INTEGER,
+                      required=True),
+    openapi.Parameter('scrape2_id', openapi.IN_QUERY,
+                      description="ID of scrape 2 to get difference",
+                      type=openapi.TYPE_INTEGER,
+                      required=True),
+    openapi.Parameter('page_link', openapi.IN_QUERY,
+                      description="The URL of the page for which difference is to be returned",
+                      type=openapi.TYPE_STRING,
+                      required=True)
+]
+
+
 @swagger_auto_schema(
     method='get',
-    manual_parameters=[
-        openapi.Parameter('scrape1_id', openapi.IN_QUERY,
-                          description="ID of scrape 1 to get difference",
-                          type=openapi.TYPE_INTEGER,
-                          required=True),
-        openapi.Parameter('scrape2_id', openapi.IN_QUERY,
-                          description="ID of scrape 2 to get difference",
-                          type=openapi.TYPE_INTEGER,
-                          required=True),
-        openapi.Parameter('page_link', openapi.IN_QUERY,
-                          description="The URL of the page for which difference is to be returned",
-                          type=openapi.TYPE_STRING,
-                          required=True)
-    ]
+    manual_parameters=difference_views_parameters
 )
 @api_view(('GET', ))
 @renderer_classes((JSONRenderer, ))
 def get_difference_html(request) -> Response:
 
-    return get_difference(request, True)
+    return get_difference(request, True, False)
 
 
 @swagger_auto_schema(
     method='get',
-    manual_parameters=[
-        openapi.Parameter('scrape1_id', openapi.IN_QUERY,
-                          description="ID of scrape 1 to get difference",
-                          type=openapi.TYPE_INTEGER,
-                          required=True),
-        openapi.Parameter('scrape2_id', openapi.IN_QUERY,
-                          description="ID of scrape 2 to get difference",
-                          type=openapi.TYPE_INTEGER,
-                          required=True),
-        openapi.Parameter('page_link', openapi.IN_QUERY,
-                          description="The URL of the page for which difference is to be returned",
-                          type=openapi.TYPE_STRING,
-                          required=True)
-    ]
+    manual_parameters=difference_views_parameters
 )
 @api_view(('GET', ))
 @renderer_classes((JSONRenderer, ))
 def get_difference_text(request) -> Response:
 
-    return get_difference(request, False)
+    return get_difference(request, False, False)
+
+
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=difference_views_parameters
+)
+@api_view(('GET', ))
+@renderer_classes((JSONRenderer, ))
+def get_difference_html_as_arrays(request) -> Response:
+
+    return get_difference(request, True, True)
+
+
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=difference_views_parameters
+)
+@api_view(('GET', ))
+@renderer_classes((JSONRenderer, ))
+def get_difference_text_as_arrays(request) -> Response:
+
+    return get_difference(request, False, True)
+
+
+@swagger_auto_schema(
+    method='get',
+    manual_parameters=difference_views_parameters[:2]
+)
+@api_view(('GET', ))
+@renderer_classes((JSONRenderer, ))
+def get_difference_urls(request: Request) -> Response:
+
+    scrape1, scrape2 = get_scrapes_from_params(request)
+
+    urls1 = set(
+        [result.page_link for result in Result.objects.filter(scrape=scrape1)])
+    urls2 = set(
+        [result.page_link for result in Result.objects.filter(scrape=scrape2)])
+
+    data = {"scrape1": ScrapeSerializer(
+        scrape1).data, "scrape2": ScrapeSerializer(scrape2).data, "urls_added": list(urls2 - urls1), "urls_removed": list(urls1 - urls2)}
+    return Response(data, status=status.HTTP_200_OK)
