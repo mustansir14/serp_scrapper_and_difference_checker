@@ -2,7 +2,7 @@ from typing import Tuple
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import mixins, viewsets
-from api.serializers import QuerySerializer, ScrapeSerializer, ResultSerializer
+from api.serializers import QuerySerializer, ScrapeSerializer, ResultListSerializer, ResultDetailSerializer
 from api.models import Query, Scrape, Status, Result
 from api.scraper import Scraper
 from django.utils.decorators import method_decorator
@@ -73,14 +73,17 @@ scrape_id = openapi.Parameter('scrape_id', openapi.IN_QUERY,
 ))
 class ResultsViewSet(viewsets.ReadOnlyModelViewSet):
 
-    serializer_class = ResultSerializer
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return ResultListSerializer
+        return ResultDetailSerializer
 
     def get_queryset(self):
         scrape = self.request.query_params.get('scrape_id')
         if scrape is not None:
             queryset = Result.objects.filter(scrape__id=scrape)
         else:
-            raise ValidationError({"message": "Missing scrape_id parameter"})
+            queryset = Result.objects.all()
         return queryset
 
 

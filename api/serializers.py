@@ -34,8 +34,16 @@ class ScrapeSerializer(serializers.ModelSerializer):
         return scrape
 
 
-class ResultSerializer(serializers.ModelSerializer):
+class ResultListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Result
         fields = "__all__"
+
+
+class ResultDetailSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Result
+        fields = ("id", "page_title", "page_link",
+                  "page_ranking", "status_code", "scrape")
