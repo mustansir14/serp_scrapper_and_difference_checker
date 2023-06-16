@@ -120,20 +120,12 @@ class Scraper:
 
         logging.info(f"Fetching Page content for {url}")
         if self.is_of_special_site(url):
-            if not self.driver:
-                self.init_driver()
-            for i in range(3):
-                try:
-                    self.driver.get(url)
-                    break
-                except:
-                    logging.info("Error in requesting page. Trying again...")
-                    self.kill_driver()
-                    self.init_driver()
-            if i == 3:
-                raise Exception("Page load Exception")
+            self.init_driver()
+            self.driver.get(url)
             time.sleep(5)
-            return self.driver.find_element(By.TAG_NAME, "body").text
+            content = self.driver.find_element(By.TAG_NAME, "body").text
+            self.kill_driver()
+            return content
         else:
             res = requests.get(url, headers={
                                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"})
@@ -149,7 +141,7 @@ class Scraper:
 
     def init_driver(self) -> None:
         options = Options()
-        options.add_argument("start-maximized")
+        options.add_argument("--start-maximized")
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         self.driver = Chrome(options=options,
