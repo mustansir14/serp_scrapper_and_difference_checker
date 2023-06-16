@@ -127,7 +127,7 @@ class Scraper:
                 self.kill_driver()
                 self.init_driver()
         if i == 3:
-            raise Exception("Page load Exception.")
+            raise Exception("Page load Exception")
         time.sleep(5)
         return self.driver.find_element(By.TAG_NAME, "body").text
 
