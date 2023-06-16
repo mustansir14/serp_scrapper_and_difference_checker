@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from api.models import Query, Scrape, Result
+from api.models import Query, Scrape, Result, Difference
 
 
 class QuerySerializer(serializers.ModelSerializer):
@@ -34,16 +34,23 @@ class ScrapeSerializer(serializers.ModelSerializer):
         return scrape
 
 
-class ResultListSerializer(serializers.ModelSerializer):
+class ResultDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Result
         fields = "__all__"
 
 
-class ResultDetailSerializer(serializers.ModelSerializer):
+class ResultListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Result
         fields = ("id", "page_title", "page_link",
-                  "page_ranking", "status_code", "scrape")
+                  "page_ranking", "scrape")
+
+
+class DifferenceSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Difference
+        exclude = ("has_difference", )

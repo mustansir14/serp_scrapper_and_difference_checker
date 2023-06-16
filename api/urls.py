@@ -9,9 +9,9 @@ router.register(r'results', views.ResultsViewSet, basename='result')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('get_difference_html', views.get_difference_html),
-    path('get_difference_text', views.get_difference_text),
-    path('get_difference_html_as_array', views.get_difference_html_as_arrays),
-    path('get_difference_text_as_array', views.get_difference_text_as_arrays),
-    path('get_difference_urls', views.get_difference_urls),
+    path('results/difference', views.get_results_with_difference),
+    path('results/difference/text/<int:id>', views.get_difference_text),
+    path('results/difference/as_array/<int:id>',
+         views.get_difference_text_as_arrays),
+    path('results/difference/urls', views.get_difference_urls),
 ]

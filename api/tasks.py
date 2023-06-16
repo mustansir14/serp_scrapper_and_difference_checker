@@ -1,6 +1,6 @@
 from celery import shared_task
 from datetime import datetime
-from api.models import Query, Scrape
+from api.models import Query, Scrape, Status
 from api.scraper import Scraper
 import logging
 logging.basicConfig(format='%(asctime)s %(message)s',
@@ -32,7 +32,7 @@ def scrape_queries():
             # Your scraping logic goes here
             logging.info(f"[Scheduled]: Scraping query: {query.query}")
 
-            scrape = Scrape(query=query)
+            scrape = Scrape(query=query, status=Status.PENDING)
             scrape.save()
             scraper = Scraper(scrape)
             scraper.start()

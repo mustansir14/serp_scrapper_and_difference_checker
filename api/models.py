@@ -39,6 +39,15 @@ class Result(models.Model):
     page_title = models.TextField(null=False, blank=False)
     page_link = models.TextField(null=False, blank=False)
     page_ranking = models.PositiveIntegerField(null=False, blank=False)
-    page_content_html = models.TextField(null=False, blank=False)
     page_content_text = models.TextField(null=False, blank=False)
-    status_code = models.PositiveIntegerField(null=False, blank=False)
+
+
+class Difference(models.Model):
+    result1 = models.ForeignKey(
+        Result, on_delete=models.CASCADE, related_name="result1")
+    result2 = models.ForeignKey(
+        Result, on_delete=models.CASCADE, related_name="result2")
+    content_difference = models.TextField(null=True, blank=True)
+    title_difference = models.TextField(null=True, blank=True)
+    ranking_difference = models.IntegerField(null=False, blank=False)
+    has_difference = models.BooleanField(null=False, blank=False)
