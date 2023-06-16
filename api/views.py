@@ -2,7 +2,7 @@ from typing import Tuple
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import mixins, viewsets
-from api.serializers import QuerySerializer, ScrapeSerializer, ResultListSerializer, ResultDetailSerializer, DifferenceSerializer
+from api.serializers import QuerySerializer, ScrapeSerializer, ResultListSerializer, ResultDetailSerializer, DifferenceSerializer, DifferenceSerializerArray
 from api.models import Query, Scrape, Status, Result, Difference
 from api.scraper import Scraper
 from django.utils.decorators import method_decorator
@@ -124,7 +124,10 @@ def get_difference(id: int, as_arrays: bool = False) -> Response:
         difference.content_difference = "\n".join(
             difference.content_difference)
         difference.title_difference = "\n".join(difference.title_difference)
-    return Response(DifferenceSerializer(difference).data, status=status.HTTP_200_OK)
+        data = DifferenceSerializer(difference).data
+    else:
+        data = DifferenceSerializerArray(difference).data
+    return Response(data, status=status.HTTP_200_OK)
 
 
 difference_views_parameters = [
@@ -199,7 +202,7 @@ def get_difference_text(request, id: int) -> Response:
 
 @swagger_auto_schema(
     method='get',
-    responses={200: DifferenceSerializer()}
+    responses={200: DifferenceSerializerArray()}
 )
 @api_view(('GET', ))
 @renderer_classes((JSONRenderer, ))

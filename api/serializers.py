@@ -54,3 +54,13 @@ class DifferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Difference
         exclude = ("has_difference", )
+
+
+class DifferenceSerializerArray(serializers.ModelSerializer):
+
+    content_difference = serializers.ListField(child=serializers.CharField())
+    title_difference = serializers.ListField(child=serializers.CharField())
+
+    class Meta:
+        model = Difference
+        exclude = ("has_difference", )
