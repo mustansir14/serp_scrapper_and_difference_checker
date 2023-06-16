@@ -7,9 +7,7 @@ from typing import List
 from api.models import Scrape, Status, Result, Difference
 from datetime import datetime, timezone
 from threading import Thread
-from bs4 import BeautifulSoup
 from undetected_chromedriver import Chrome
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 import difflib
@@ -141,8 +139,12 @@ class Scraper:
         self.scrape.save()
 
     def init_driver(self) -> None:
-        self.driver = Chrome(
-            headless=os.getenv('ENVIRON') == 'prod')
+        options = Options()
+        options.add_argument("start-maximized")
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        self.driver = Chrome(options=options,
+                             headless=os.getenv('ENVIRON') == 'prod')
         self.driver.set_page_load_timeout(30)
 
     def kill_driver(self) -> None:
