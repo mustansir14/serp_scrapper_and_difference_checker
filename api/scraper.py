@@ -13,6 +13,7 @@ from selenium.webdriver.common.by import By
 import difflib
 import json
 import time
+from bs4 import BeautifulSoup
 
 load_dotenv()
 logging.basicConfig(format='%(asctime)s %(message)s',
@@ -35,6 +36,8 @@ class Scraper:
         }
 
         self.driver = None
+        self.special_sites = ["linkedin.com",
+                              "instagram.com", "facebook.com", "pinterest.com", 'twitter.com']
 
     def get_serp_data(self) -> List[dict]:
         logging.info(f"Fetching SERP data for {self.scrape.query.query}")
@@ -116,20 +119,26 @@ class Scraper:
     def request_page(self, url: str) -> str:
 
         logging.info(f"Fetching Page content for {url}")
-        if not self.driver:
-            self.init_driver()
-        for i in range(3):
-            try:
-                self.driver.get(url)
-                break
-            except:
-                logging.info("Error in requesting page. Trying again...")
-                self.kill_driver()
+        if self.is_of_special_site(url):
+            if not self.driver:
                 self.init_driver()
-        if i == 3:
-            raise Exception("Page load Exception")
-        time.sleep(5)
-        return self.driver.find_element(By.TAG_NAME, "body").text
+            for i in range(3):
+                try:
+                    self.driver.get(url)
+                    break
+                except:
+                    logging.info("Error in requesting page. Trying again...")
+                    self.kill_driver()
+                    self.init_driver()
+            if i == 3:
+                raise Exception("Page load Exception")
+            time.sleep(5)
+            return self.driver.find_element(By.TAG_NAME, "body").text
+        else:
+            res = requests.get(url, headers={
+                               "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"})
+            soup = BeautifulSoup(res.content, "html.parser")
+            return soup.text
 
     def update_scrape(self, status: str, log: str = "") -> None:
         self.scrape.status = status
@@ -153,3 +162,9 @@ class Scraper:
         except:
             pass
         self.driver = None
+
+    def is_of_special_site(self, url):
+        for site in self.special_sites:
+            if site in url:
+                return True
+        return False
