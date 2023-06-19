@@ -1,1 +1,5 @@
-# serp_scrapper_and_difference_checker
+# SERP Scraper and Difference Checker
+
+The backend for a project developed to scrape SERP for given queries on a monthly basis, and highlighting differences found in the results in each month.
+
+Developed using Python FastAPI. Uses the DataForSEO API to gather SERP results.
