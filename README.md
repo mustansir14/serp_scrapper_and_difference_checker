@@ -2,4 +2,4 @@
 
 The backend for a project developed to scrape SERP for given queries on a monthly basis, and highlighting differences found in the results in each month.
 
-Developed using Python FastAPI. Uses the DataForSEO API to gather SERP results.
+Developed using Python Django. Uses the DataForSEO API to gather SERP results.
