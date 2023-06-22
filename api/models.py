@@ -40,6 +40,9 @@ class Result(models.Model):
     page_link = models.TextField(null=False, blank=False)
     page_ranking = models.PositiveIntegerField(null=False, blank=False)
     page_content_text = models.TextField(null=False, blank=False)
+    page_scrape_status = models.CharField(choices=Status.choices,
+                                          default=Status.PENDING, null=False, blank=False, max_length=15)
+    page_scrape_log = models.TextField(default=None, null=True, blank=True)
 
 
 class Difference(models.Model):

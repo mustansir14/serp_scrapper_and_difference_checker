@@ -14,6 +14,7 @@ import difflib
 import json
 import time
 from bs4 import BeautifulSoup
+import re
 
 load_dotenv()
 logging.basicConfig(format='%(asctime)s %(message)s',
@@ -77,6 +78,7 @@ class Scraper:
                 except Result.DoesNotExist:
                     pass
 
+            logging.info(f"Scraping finished for {self.scrape.query.query}")
             self.update_scrape(Status.SUCCESS)
         except Exception as e:
             logging.error("Error: " + str(e))
@@ -92,8 +94,12 @@ class Scraper:
             result.page_content_text = self.request_page(
                 serp_item['url'])
         except Exception as e:
-            logging.error("Error in requesting page: ", str(e))
+            logging.error("Error in requesting page: " + str(e))
+            result.page_scrape_status = Status.FAILED
+            result.page_scrape_log = str(e)
+            result.save()
             return None
+        result.page_scrape_status = Status.SUCCESS
         result.save()
         return result
 
@@ -119,18 +125,71 @@ class Scraper:
     def request_page(self, url: str) -> str:
 
         logging.info(f"Fetching Page content for {url}")
-        if self.is_of_special_site(url):
-            self.init_driver()
-            self.driver.get(url)
-            time.sleep(5)
-            content = self.driver.find_element(By.TAG_NAME, "body").text
-            self.kill_driver()
-            return content
+        special_site = self.is_of_special_site(url)
+        if special_site:
+            content = self.request_using_selenium(url)
         else:
-            res = requests.get(url, headers={
-                               "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"})
-            soup = BeautifulSoup(res.content, "html.parser")
-            return soup.text
+            content = self.request_using_requests(url)
+        if self.scrape.query.query.lower() not in content.lower():
+            raise Exception("Query not in returned content.")
+        if not special_site:
+            content = self.search_text(content)
+        content = content.strip()
+        if not content:
+            raise Exception("Empty content.")
+        return content
+
+    def search_text(self, text) -> str:
+        # Prepare the query by splitting it into individual words
+        query_words = self.scrape.query.query.lower().split()
+
+        # Create a regex pattern to match any of the query words
+        pattern = r"\b(" + "|".join(re.escape(word)
+                                    for word in query_words) + r")\b"
+
+        # Find all matches in the text
+        matches = re.finditer(pattern, text.lower())
+
+        # Extract the sections around each match
+        sections = []
+        for match in matches:
+            start_index = max(0, match.start() - 25)
+            end_index = min(len(text), match.end() + 25)
+            section = text[start_index:end_index]
+            sections.append(section)
+
+        return "\n\n".join(sections)
+
+    def request_using_requests(self, url: str) -> str:
+        res = requests.get(url, headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"})
+        soup = BeautifulSoup(res.content, "html.parser")
+        return soup.text
+
+    def request_using_selenium(self, url: str) -> str:
+        self.init_driver()
+        self.driver.get(url)
+        time.sleep(5)
+        try:
+            if "twitter.com" in url:
+                content = "\n".join([el.text for el in self.driver.find_element(
+                    By.CLASS_NAME, "css-1dbjc4n.r-1ifxtd0.r-ymttw5.r-ttdzmv").find_elements(By.XPATH, "*")[1:4]])
+            elif "pinterest.com" in url:
+                content = "\n".join([el.text for el in self.driver.find_element(
+                    By.CLASS_NAME, "Jea.KS5.a3i.jzS.zI7.iyn.Hsu").find_elements(By.XPATH, "*")[1:4]])
+            else:
+                if "instagram.com" in url:
+                    class_name = "_aa_c"
+                elif "linkedin.com" in url:
+                    class_name = "scaffold-layout__main"
+                elif "facebook.com" in url:
+                    class_name = "x1yztbdb"
+                content = self.driver.find_element(
+                    By.CLASS_NAME, class_name).text
+        except:
+            content = self.driver.find_element(By.TAG_NAME, "body").text
+        self.kill_driver()
+        return content
 
     def update_scrape(self, status: str, log: str = "") -> None:
         self.scrape.status = status
