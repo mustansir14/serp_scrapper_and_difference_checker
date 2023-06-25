@@ -46,7 +46,7 @@ class ResultListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Result
         fields = ("id", "page_title", "page_link",
-                  "page_ranking", "scrape")
+                  "page_ranking", "scrape", "page_scrape_status", "page_scrape_log")
 
 
 class DifferenceSerializer(serializers.ModelSerializer):

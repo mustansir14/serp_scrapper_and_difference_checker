@@ -100,6 +100,7 @@ class Scraper:
             result.save()
             return None
         result.page_scrape_status = Status.SUCCESS
+        result.page_scrape_log = ""
         result.save()
         return result
 
@@ -152,13 +153,20 @@ class Scraper:
 
         # Extract the sections around each match
         sections = []
+        last_end_index = 0
         for match in matches:
-            start_index = max(0, match.start() - 25)
-            end_index = min(len(text), match.end() + 25)
+            start_index = max(last_end_index, match.start() - 300)
+            if start_index != last_end_index:
+                sections.append("...\n\n")
+            end_index = min(len(text), match.end() + 300)
             section = text[start_index:end_index]
             sections.append(section)
+            last_end_index = end_index
 
-        return "\n\n".join(sections)
+        if end_index != len(text):
+            sections.append("...")
+
+        return "".join(sections)
 
     def request_using_requests(self, url: str) -> str:
         res = requests.get(url, headers={
@@ -177,15 +185,17 @@ class Scraper:
             elif "pinterest.com" in url:
                 content = "\n".join([el.text for el in self.driver.find_element(
                     By.CLASS_NAME, "Jea.KS5.a3i.jzS.zI7.iyn.Hsu").find_elements(By.XPATH, "*")[1:4]])
-            else:
-                if "instagram.com" in url:
-                    class_name = "_aa_c"
-                elif "linkedin.com" in url:
-                    class_name = "scaffold-layout__main"
-                elif "facebook.com" in url:
-                    class_name = "x1yztbdb"
+            elif "instagram.com" in url:
                 content = self.driver.find_element(
-                    By.CLASS_NAME, class_name).text
+                    By.CLASS_NAME, "_aa_c").text
+            elif "linkedin.com" in url:
+                content = self.driver.find_element(
+                    By.CLASS_NAME, "scaffold-layout__main").text
+            elif "facebook.com" in url:
+                content = self.driver.find_element(By.TAG_NAME, "h1").text.strip() + "\n\n" + self.driver.find_element(
+                    By.CLASS_NAME, "x1yztbdb").text.strip()
+            else:
+                content = self.driver.find_element(By.TAG_NAME, "body").text
         except:
             content = self.driver.find_element(By.TAG_NAME, "body").text
         self.kill_driver()
