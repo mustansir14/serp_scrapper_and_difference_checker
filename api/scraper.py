@@ -91,8 +91,15 @@ class Scraper:
         result = Result(
             scrape=self.scrape, page_title=serp_item['title'], page_link=serp_item['url'], page_ranking=serp_item['rank_absolute'])
         try:
-            result.page_content_text = self.request_page(
+            content = self.request_page(
                 serp_item['url'])
+            query_lowered = self.scrape.query.query.lower()
+            if query_lowered not in serp_item['title'].lower() and query_lowered not in serp_item['url'].replace("-", " ").replace("_", " ").replace(".", " ") and query_lowered.replace(" ", "") not in serp_item['url']:
+                if query_lowered not in content.lower():
+                    raise Exception("Query not in returned content.")
+                if not self.is_of_special_site(serp_item['url']):
+                    content = self.search_text(content)
+            result.page_content_text = content
         except Exception as e:
             logging.error("Error in requesting page: " + str(e))
             result.page_scrape_status = Status.FAILED
@@ -126,15 +133,10 @@ class Scraper:
     def request_page(self, url: str) -> str:
 
         logging.info(f"Fetching Page content for {url}")
-        special_site = self.is_of_special_site(url)
-        if special_site:
+        if self.is_of_special_site(url):
             content = self.request_using_selenium(url)
         else:
             content = self.request_using_requests(url)
-        if self.scrape.query.query.lower() not in content.lower():
-            raise Exception("Query not in returned content.")
-        if not special_site:
-            content = self.search_text(content)
         content = content.strip()
         if not content:
             raise Exception("Empty content.")
