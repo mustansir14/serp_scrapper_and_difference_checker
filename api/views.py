@@ -162,8 +162,10 @@ def get_difference_urls(request: Request) -> Response:
     all_urls = set([result.page_link for result in Result.objects.filter(
         scrape__query=scrape1.query).exclude(scrape=scrape2)])
 
+    unique_urls_added = urls2 - all_urls
+    urls_added = urls2 - urls1 - unique_urls_added
     data = {"scrape1": ScrapeSerializer(
-        scrape1).data, "scrape2": ScrapeSerializer(scrape2).data, "urls_added": list(urls2 - urls1), "urls_removed": list(urls1 - urls2), "unique_urls_added": [list(urls2 - all_urls)]}
+        scrape1).data, "scrape2": ScrapeSerializer(scrape2).data, "urls_added": list(urls_added), "urls_removed": list(urls1 - urls2), "unique_urls_added": [list(unique_urls_added)]}
     return Response(data, status=status.HTTP_200_OK)
 
 
