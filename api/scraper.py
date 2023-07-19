@@ -45,7 +45,7 @@ class Scraper:
         url = "https://api.dataforseo.com/v3/serp/google/organic/live/advanced"
 
         payload = [{"keyword": self.scrape.query.query, "location_code": 2826,
-                    "language_code": "en", "device": "desktop", "os": "windows", "depth": 20}]
+                    "language_code": "en", "device": "desktop", "os": "windows", "depth": 100}]
 
         response = requests.request(
             "POST", url, headers=self.headers, json=payload)
