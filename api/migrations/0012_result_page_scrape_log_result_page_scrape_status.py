@@ -4,20 +4,27 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0011_rename_difference_difference_content_difference_and_more'),
+        ("api", "0011_rename_difference_difference_content_difference_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='result',
-            name='page_scrape_log',
+            model_name="result",
+            name="page_scrape_log",
             field=models.TextField(blank=True, default=None, null=True),
         ),
         migrations.AddField(
-            model_name='result',
-            name='page_scrape_status',
-            field=models.CharField(choices=[('success', 'Success'), ('failed', 'Failed'), ('pending', 'Pending')], default='pending', max_length=15),
+            model_name="result",
+            name="page_scrape_status",
+            field=models.CharField(
+                choices=[
+                    ("success", "Success"),
+                    ("failed", "Failed"),
+                    ("pending", "Pending"),
+                ],
+                default="pending",
+                max_length=15,
+            ),
         ),
     ]

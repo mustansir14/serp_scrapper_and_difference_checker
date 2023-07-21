@@ -1,10 +1,15 @@
-from celery import shared_task
+import logging
 from datetime import datetime
+
+from celery import shared_task
+
 from api.models import Query, Scrape, Status
 from api.scraper import Scraper
-import logging
-logging.basicConfig(format='%(asctime)s %(message)s',
-                    datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
+from serp_checker.celery import app
+
+logging.basicConfig(
+    format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %H:%M:%S", level=logging.INFO
+)
 
 
 @shared_task
@@ -23,8 +28,9 @@ def scrape_queries():
         created_year = query.created_at.year
 
         # Calculate the number of months since the query was created
-        num_months = (current_year - created_year) * \
-            12 + (current_month - created_month)
+        num_months = (current_year - created_year) * 12 + (
+            current_month - created_month
+        )
 
         # Check if the query should be scraped this month based on the interval
         if num_months % query.interval_no_of_months == 0:
@@ -36,3 +42,10 @@ def scrape_queries():
             scrape.save()
             scraper = Scraper(scrape)
             scraper.start()
+
+
+@app.task
+def perform_scrape(scrape_id: int):
+    scrape = Scrape.objects.get(id=scrape_id)
+    scraper = Scraper(scrape)
+    scraper.start()

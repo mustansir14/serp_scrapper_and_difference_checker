@@ -4,21 +4,20 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0005_alter_scrape_log'),
+        ("api", "0005_alter_scrape_log"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='result',
-            old_name='page_content',
-            new_name='page_content_html',
+            model_name="result",
+            old_name="page_content",
+            new_name="page_content_html",
         ),
         migrations.AddField(
-            model_name='result',
-            name='page_content_text',
-            field=models.TextField(default=''),
+            model_name="result",
+            name="page_content_text",
+            field=models.TextField(default=""),
             preserve_default=False,
         ),
     ]

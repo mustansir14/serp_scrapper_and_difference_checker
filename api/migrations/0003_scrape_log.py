@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('api', '0002_alter_scrape_started_at'),
+        ("api", "0002_alter_scrape_started_at"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='scrape',
-            name='log',
+            model_name="scrape",
+            name="log",
             field=models.TextField(default=None),
         ),
     ]

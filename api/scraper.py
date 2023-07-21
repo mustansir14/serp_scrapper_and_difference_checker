@@ -1,69 +1,87 @@
-import logging
-import requests
-import os
-from base64 import b64encode
-from dotenv import load_dotenv
-from typing import List
-from api.models import Scrape, Status, Result, Difference
-from datetime import datetime, timezone
-from threading import Thread
-from undetected_chromedriver import Chrome
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 import difflib
 import json
-import time
-from bs4 import BeautifulSoup
+import logging
+import os
 import re
+import time
+from base64 import b64encode
+from datetime import datetime, timezone
+from typing import List
+
+import requests
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from undetected_chromedriver import Chrome
+
+from api.models import Difference, Result, Scrape, Status
 
 load_dotenv()
-logging.basicConfig(format='%(asctime)s %(message)s',
-                    datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s %(message)s", datefmt="%m/%d/%Y %H:%M:%S", level=logging.INFO
+)
 
 
 class Scraper:
-
     def __init__(self, scrape: Scrape) -> None:
         self.scrape = scrape
 
         base64_bytes = b64encode(
-            ("%s:%s" % (os.getenv("DFS_EMAIL"),
-             os.getenv("DFS_PASSWORD"))).encode("ascii")
+            ("%s:%s" % (os.getenv("DFS_EMAIL"), os.getenv("DFS_PASSWORD"))).encode(
+                "ascii"
+            )
         ).decode("ascii")
 
         self.headers = {
-            'Authorization': f'Basic {base64_bytes}',
-            'Content-Type': 'application/json'
+            "Authorization": f"Basic {base64_bytes}",
+            "Content-Type": "application/json",
         }
 
         self.driver = None
-        self.special_sites = ["linkedin.com",
-                              "instagram.com", "facebook.com", "pinterest.com", 'twitter.com']
+        self.special_sites = [
+            "linkedin.com",
+            "instagram.com",
+            "facebook.com",
+            "pinterest.com",
+            "twitter.com",
+        ]
 
     def get_serp_data(self) -> List[dict]:
         logging.info(f"Fetching SERP data for {self.scrape.query.query}")
         url = "https://api.dataforseo.com/v3/serp/google/organic/live/advanced"
 
-        payload = [{"keyword": self.scrape.query.query, "location_code": 2826,
-                    "language_code": "en", "device": "desktop", "os": "windows", "depth": 100}]
+        payload = [
+            {
+                "keyword": self.scrape.query.query,
+                "location_code": 2826,
+                "language_code": "en",
+                "device": "desktop",
+                "os": "windows",
+                "depth": 100,
+            }
+        ]
 
         response = requests.request(
             "POST", url, headers=self.headers, json=payload)
 
-        return response.json()['tasks'][0]['result'][0]['items']
+        return response.json()["tasks"][0]["result"][0]["items"]
 
     def start(self) -> None:
-
         logging.info(f"Starting scraping for {self.scrape.query.query}")
 
-        previous_scrape = Scrape.objects.filter(query=self.scrape.query, completed_at__isnull=False).exclude(
-            id=self.scrape.id).order_by('-completed_at').first()
+        previous_scrape = (
+            Scrape.objects.filter(query=self.scrape.query,
+                                  completed_at__isnull=False)
+            .exclude(id=self.scrape.id)
+            .order_by("-completed_at")
+            .first()
+        )
 
         try:
             data = self.get_serp_data()
             for serp_item in data:
-
-                if serp_item['type'] != "organic":
+                if serp_item["type"] != "organic":
                     continue
 
                 result = self.get_result(serp_item)
@@ -73,7 +91,8 @@ class Scraper:
 
                 try:
                     previous_result = Result.objects.get(
-                        scrape=previous_scrape, page_link=result.page_link)
+                        scrape=previous_scrape, page_link=result.page_link
+                    )
                     self.get_difference(previous_result, result)
                 except Result.DoesNotExist:
                     pass
@@ -87,17 +106,27 @@ class Scraper:
         self.kill_driver()
 
     def get_result(self, serp_item: dict) -> Result | None:
-
         result = Result(
-            scrape=self.scrape, page_title=serp_item['title'], page_link=serp_item['url'], page_ranking=serp_item['rank_absolute'])
+            scrape=self.scrape,
+            page_title=serp_item["title"],
+            page_link=serp_item["url"],
+            page_ranking=serp_item["rank_absolute"],
+        )
         try:
-            content = self.request_page(
-                serp_item['url'])
+            content = self.request_page(serp_item["url"])
             query_lowered = self.scrape.query.query.lower()
-            if query_lowered not in serp_item['title'].lower() and query_lowered not in serp_item['url'].replace("-", " ").replace("_", " ").replace(".", " ") and query_lowered.replace(" ", "") not in serp_item['url']:
+            if (
+                query_lowered not in serp_item["title"].lower()
+                and query_lowered
+                not in serp_item["url"]
+                .replace("-", " ")
+                .replace("_", " ")
+                .replace(".", " ")
+                and query_lowered.replace(" ", "") not in serp_item["url"]
+            ):
                 if query_lowered not in content.lower():
                     raise Exception("Query not in returned content.")
-                if not self.is_of_special_site(serp_item['url']):
+                if not self.is_of_special_site(serp_item["url"]):
                     content = self.search_text(content)
             result.page_content_text = content
         except Exception as e:
@@ -112,26 +141,24 @@ class Scraper:
         return result
 
     def get_difference(self, result1: Result, result2: Result):
-
-        difference = Difference(
-            result1=result1, result2=result2)
+        difference = Difference(result1=result1, result2=result2)
         d = difflib.Differ()
         text1_lines = result1.page_content_text.splitlines()
         text2_lines = result2.page_content_text.splitlines()
         difference.content_difference = json.dumps(
-            list(d.compare(text1_lines, text2_lines)))
+            list(d.compare(text1_lines, text2_lines))
+        )
         difference.title_difference = json.dumps(
-            list(d.compare([result1.page_title], [result2.page_title])))
+            list(d.compare([result1.page_title], [result2.page_title]))
+        )
         difference.ranking_difference = result2.page_ranking - result1.page_ranking
-        difference.has_difference = result1.page_content_text != result2.page_content_text or result1.page_title != result2.page_title
+        difference.has_difference = (
+            result1.page_content_text != result2.page_content_text
+            or result1.page_title != result2.page_title
+        )
         difference.save()
 
-    def start_async(self) -> None:
-        thread = Thread(target=self.start)
-        thread.start()
-
     def request_page(self, url: str) -> str:
-
         logging.info(f"Fetching Page content for {url}")
         if self.is_of_special_site(url):
             content = self.request_using_selenium(url)
@@ -171,8 +198,12 @@ class Scraper:
         return "".join(sections)
 
     def request_using_requests(self, url: str) -> str:
-        res = requests.get(url, headers={
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"})
+        res = requests.get(
+            url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+            },
+        )
         soup = BeautifulSoup(res.content, "html.parser")
         return soup.text
 
@@ -182,20 +213,35 @@ class Scraper:
         time.sleep(5)
         try:
             if "twitter.com" in url:
-                content = "\n".join([el.text for el in self.driver.find_element(
-                    By.CLASS_NAME, "css-1dbjc4n.r-1ifxtd0.r-ymttw5.r-ttdzmv").find_elements(By.XPATH, "*")[1:4]])
+                content = "\n".join(
+                    [
+                        el.text
+                        for el in self.driver.find_element(
+                            By.CLASS_NAME, "css-1dbjc4n.r-1ifxtd0.r-ymttw5.r-ttdzmv"
+                        ).find_elements(By.XPATH, "*")[1:4]
+                    ]
+                )
             elif "pinterest.com" in url:
-                content = "\n".join([el.text for el in self.driver.find_element(
-                    By.CLASS_NAME, "Jea.KS5.a3i.jzS.zI7.iyn.Hsu").find_elements(By.XPATH, "*")[1:4]])
+                content = "\n".join(
+                    [
+                        el.text
+                        for el in self.driver.find_element(
+                            By.CLASS_NAME, "Jea.KS5.a3i.jzS.zI7.iyn.Hsu"
+                        ).find_elements(By.XPATH, "*")[1:4]
+                    ]
+                )
             elif "instagram.com" in url:
-                content = self.driver.find_element(
-                    By.CLASS_NAME, "_aa_c").text
+                content = self.driver.find_element(By.CLASS_NAME, "_aa_c").text
             elif "linkedin.com" in url:
                 content = self.driver.find_element(
-                    By.CLASS_NAME, "scaffold-layout__main").text
+                    By.CLASS_NAME, "scaffold-layout__main"
+                ).text
             elif "facebook.com" in url:
-                content = self.driver.find_element(By.TAG_NAME, "h1").text.strip() + "\n\n" + self.driver.find_element(
-                    By.CLASS_NAME, "x1yztbdb").text.strip()
+                content = (
+                    self.driver.find_element(By.TAG_NAME, "h1").text.strip()
+                    + "\n\n"
+                    + self.driver.find_element(By.CLASS_NAME, "x1yztbdb").text.strip()
+                )
             else:
                 content = self.driver.find_element(By.TAG_NAME, "body").text
         except:
@@ -213,10 +259,10 @@ class Scraper:
     def init_driver(self) -> None:
         options = Options()
         options.add_argument("--start-maximized")
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        self.driver = Chrome(options=options,
-                             headless=os.getenv('ENVIRON') == 'prod')
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        self.driver = Chrome(
+            options=options, headless=os.getenv("ENVIRON") == "prod")
         self.driver.set_page_load_timeout(30)
 
     def kill_driver(self) -> None:
