@@ -115,19 +115,23 @@ class Scraper:
         try:
             content = self.request_page(serp_item["url"])
             query_lowered = self.scrape.query.query.lower()
-            if (
-                query_lowered not in serp_item["title"].lower()
-                and query_lowered
-                not in serp_item["url"]
-                .replace("-", " ")
-                .replace("_", " ")
-                .replace(".", " ")
-                and query_lowered.replace(" ", "") not in serp_item["url"]
-            ):
-                if query_lowered not in content.lower():
-                    raise Exception("Query not in returned content.")
-                if not self.is_of_special_site(serp_item["url"]):
-                    content = self.search_text(content)
+            # if (
+            #     query_lowered not in serp_item["title"].lower()
+            #     and query_lowered
+            #     not in serp_item["url"]
+            #     .replace("-", " ")
+            #     .replace("_", " ")
+            #     .replace(".", " ")
+            #     and query_lowered.replace(" ", "") not in serp_item["url"]
+            # ):
+            if query_lowered not in content.lower():
+                raise Exception("Query not in returned content.")
+            if not self.is_of_special_site(serp_item["url"]):
+                content = self.search_text(content)
+
+            # replace multiple \n with two
+            content = re.sub(r'\n{2,}', '\n\n', content)
+
             result.page_content_text = content
         except Exception as e:
             logging.error("Error in requesting page: " + str(e))
@@ -169,7 +173,10 @@ class Scraper:
             raise Exception("Empty content.")
         return content
 
-    def search_text(self, text) -> str:
+    def search_text(self, text: str) -> str:
+        """
+        Returns sections of text where the query or a word from the query is present
+        """
         # Prepare the query by splitting it into individual words
         query_words = self.scrape.query.query.lower().split()
 
@@ -183,6 +190,7 @@ class Scraper:
         # Extract the sections around each match
         sections = []
         last_end_index = 0
+        end_index = None
         for match in matches:
             start_index = max(last_end_index, match.start() - 300)
             if start_index != last_end_index:
