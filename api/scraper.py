@@ -124,7 +124,7 @@ class Scraper:
             #     .replace(".", " ")
             #     and query_lowered.replace(" ", "") not in serp_item["url"]
             # ):
-            if query_lowered not in content.lower():
+            if all([query not in content.lower() for query in query_lowered.split()]):
                 raise Exception("Query not in returned content.")
             if not self.is_of_special_site(serp_item["url"]):
                 content = self.search_text(content)
