@@ -69,7 +69,10 @@ class Scraper:
         response = requests.request(
             "POST", url, headers=self.headers, json=payload)
 
-        return response.json()["tasks"][0]["result"][0]["items"]
+        try:
+            return response.json()["tasks"][0]["result"][0]["items"]
+        except (KeyError, IndexError):
+            raise Exception(response.text)
 
     def start(self) -> None:
         logging.info(f"Starting scraping for {self.scrape.query.query}")
@@ -107,8 +110,8 @@ class Scraper:
             logging.error("Error: " + str(e))
             self.update_scrape(Status.FAILED, str(e))
 
-        self.send_email_unique_urls()
         self.kill_driver()
+        self.send_email_unique_urls()
 
     def get_result(self, serp_item: dict) -> Result | None:
         result = Result(
@@ -305,17 +308,28 @@ class Scraper:
         )
 
         unique_urls_added = urls - all_urls
+        count_unique_urls = len(unique_urls_added)
 
-        if len(unique_urls_added) == 0:
+        logging.info(f"Found {count_unique_urls} unique urls")
+        if count_unique_urls == 0:
             return
 
+        logging.info(
+            f"Sending email to recipients {settings.EMAIL_RECIPIENTS}...")
         html_message = render_to_string(
             'unique_urls_email.html', {'urls': [{"title": url[0], "url": url[1]} for url in unique_urls_added], 'query': self.scrape.query.query})
         plain_message = strip_tags(html_message)
 
-        send_mail(
-            subject=f'Found {len(unique_urls_added)} new results for "{self.scrape.query.query}"',
+        print(send_mail(
+            subject=f'Found {count_unique_urls} new results for "{self.scrape.query.query}"',
             message=plain_message,
             from_email=settings.EMAIL_HOST_USER,
             recipient_list=settings.EMAIL_RECIPIENTS,
-            html_message=html_message)
+            html_message=html_message))
+        logging.info("Email sent successfully")
+
+
+scrape = Scrape.objects.get(pk=54)
+print(scrape)
+scraper = Scraper(scrape)
+scraper.send_email_unique_urls()
