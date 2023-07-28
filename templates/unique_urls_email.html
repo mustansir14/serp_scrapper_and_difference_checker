@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <p>
+      We just finished a scrape for the query "{{ query }}" and found the
+      following new results:
+    </p>
+    <ul>
+      {% for url in urls %}
+      <li><a href="{{ url.url }}">{{ url.title }}</a></li>
+      {% endfor %}
+    </ul>
+  </body>
+</html>

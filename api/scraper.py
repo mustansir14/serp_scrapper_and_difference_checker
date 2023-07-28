@@ -14,6 +14,10 @@ from dotenv import load_dotenv
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from undetected_chromedriver import Chrome
+from django.core.mail import send_mail
+from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 
 from api.models import Difference, Result, Scrape, Status
 
@@ -103,6 +107,7 @@ class Scraper:
             logging.error("Error: " + str(e))
             self.update_scrape(Status.FAILED, str(e))
 
+        self.send_email_unique_urls()
         self.kill_driver()
 
     def get_result(self, serp_item: dict) -> Result | None:
@@ -286,3 +291,31 @@ class Scraper:
             if site in url:
                 return True
         return False
+
+    def send_email_unique_urls(self) -> None:
+        urls = set(
+            [(result.page_title, result.page_link) for result in Result.objects.filter(scrape=self.scrape, page_scrape_status=Status.SUCCESS)])
+        all_urls = set(
+            [
+                (result.page_title, result.page_link)
+                for result in Result.objects.filter(scrape__query=self.scrape.query, page_scrape_status=Status.SUCCESS).exclude(
+                    scrape=self.scrape
+                )
+            ]
+        )
+
+        unique_urls_added = urls - all_urls
+
+        if len(unique_urls_added) == 0:
+            return
+
+        html_message = render_to_string(
+            'unique_urls_email.html', {'urls': [{"title": url[0], "url": url[1]} for url in unique_urls_added], 'query': self.scrape.query.query})
+        plain_message = strip_tags(html_message)
+
+        send_mail(
+            subject=f'Found {len(unique_urls_added)} new results for "{self.scrape.query.query}"',
+            message=plain_message,
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=settings.EMAIL_RECIPIENTS,
+            html_message=html_message)

@@ -179,13 +179,13 @@ def get_difference_urls(request: Request) -> Response:
     scrape1, scrape2 = get_scrapes_from_params(request)
 
     urls1 = set(
-        [result.page_link for result in Result.objects.filter(scrape=scrape1)])
+        [result.page_link for result in Result.objects.filter(scrape=scrape1, page_scrape_status=Status.SUCCESS)])
     urls2 = set(
-        [result.page_link for result in Result.objects.filter(scrape=scrape2)])
+        [result.page_link for result in Result.objects.filter(scrape=scrape2, page_scrape_status=Status.SUCCESS)])
     all_urls = set(
         [
             result.page_link
-            for result in Result.objects.filter(scrape__query=scrape1.query).exclude(
+            for result in Result.objects.filter(scrape__query=scrape1.query, page_scrape_status=Status.SUCCESS).exclude(
                 scrape=scrape2
             )
         ]

@@ -73,7 +73,7 @@ ROOT_URLCONF = "serp_checker.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": ["templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -175,3 +175,6 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_PORT = os.getenv("EMAIL_PORT")
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
+
+EMAIL_RECIPIENTS = [x.strip()
+                    for x in os.getenv("EMAIL_RECIPIENTS").split(",")]
